@@ -34,17 +34,29 @@ class cmds(commands.Cog):
 
 	@commands.command(name="create")
 	async def create(self, client):
+		await client.message.delete()
 		if self.games[str(client.guild.id)] == None:
 			self.games[str(client.guild.id)] = game(client)
 		else:
 			return await client.send("There is a game in progress!\nPlease wait until the current game is over!")
 		await self._selfgame(client).initialise()
-		self.
 
-	# @commands.command(name="end")
-	# async def endGame(self,client):
-	# 	if self.games():
-	# 		pass
+	@commands.command(name="end")
+	async def endGame(self,client):
+		await client.message.delete()
+		if self._selfgame(client) == None:
+			return await client.send("There is no game associated to this server!")
+		if not client.author == self._selfgame(client).creator:
+			return await client.send("You have to be the game creator to end the game!\nIf the game creator went afk, please wait 10 minutes for the game to auto-end!")
+		self.games[str(client.guild.id)] = None
+		return
+
+
+
+	# @commands.command(name="join")
+	# async def player_join(self, client):
+	# 	if self._selfgame(client):
+
 
 
 # test func pls del later
@@ -55,7 +67,10 @@ class cmds(commands.Cog):
 		await client.send(next(self._selfgame(client).tzar.next_q()))
 
 
-
+@bot.command(name="dc")
+async def bot_logout(client):
+	await bot.logout()
+	
 bot.add_cog(cmds(bot))
 
 bot.run(TOKEN)

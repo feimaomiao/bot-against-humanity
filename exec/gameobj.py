@@ -69,7 +69,7 @@ class game:
 		return self.plEmbed
 
 	@property
-	def initEmbed(self):
+	async def initEmbed(self):
 		return await self.playerlistEmbed()
 	
 
@@ -98,7 +98,6 @@ class player:
 
 		# assign cards.
 		self.cards = get_cards(self.game.answers, 10)
-
 		self.send_channel = self.user.dm_channel
 		
 	def __repr__(self):
