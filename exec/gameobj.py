@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 from copy import deepcopy as copyof
@@ -44,10 +45,23 @@ class game:
 		self.players.append(self.tzar)
 
 		self.plEmbed=None
+		self.playerMsg = None
+
 
 	# when one joins the game
-	def join(self, join_message):
-		self.players.append(player(join_message.author, self))
+	async def join(self, join_message):
+		# Check if player is already registered in the game.
+		if player(join_message.author, self) not in self.players:
+			# adds player to list
+			self.players.append(player(join_message.author, self))
+
+			# creates discord embed object of a list of players
+			self.createPlayerEmbed()
+			return await self.playerMsg.edit(embed=self.plEmbed)
+		msg = await join_message.send("You have already joined the game!")
+		await asyncio.sleep(5)
+		return await msg.delete()
+
 
 	def set_Tzar(self, p):
 		p.tzar= True
@@ -62,27 +76,51 @@ class game:
 		p.choose_winner = choose_winner
 		return p
 
-	def playerlistEmbed(self):
+	def createPlayerEmbed(self):
+		ptrStr = []
+		for i in range(len(self.player_list)):
+			ptrStr.append(f"{i+1}. {self.player_list[i]}\n")
+		self.plEmbed = None
 		self.plEmbed = discordEmbed(title="Cards against humainty game")
-		self.plEmbed.description = f"Host: {self.creator.display_name}"
-		self.plEmbed.add_field(name="Players", value="\n".join(self.player_list))
+		self.plEmbed.description = f"Host: {self.creator.mention}"
+		self.plEmbed = self.fit1024(ptrStr, self.plEmbed)
 		return self.plEmbed
 
-	@property
-	async def initEmbed(self):
-		return await self.playerlistEmbed()
-	
+	def fit1024(strArr, embed):
+		length = 0
+		index = 0
+		ret = [""]
+		for i in range(len(strArr)):
+			if length + len(strArr[i]) < 1024:
+				ret[index] += strArr[i]
+				length += len(strArr[i])
+			else:
+				length = 0
+				index += 1
+				ret.append("")
+				ret[index] += strArr[i]
+				length += len(strArr[i])
+		for i in ret:
+			embed.add_field(name="Players",values=i)
+		return embed
 
 	@property
 	def player_list(self):
-		return [i.name for i in self.players]
+		return [i.mention for i in self.players]
 
-	async def initialise(self):
+	# Initialise game with parameteers
+	async def initialise(self, client):
 		for p in self.players:
 			if p.send_channel == None:
 				p.send_channel = await p.user.create_dm()
+		self.createPlayerEmbed()
+		self.playerMsg = await client.send(embed=self.plEmbed)
+		return 
 
-
+	# deletes all the previous game messages
+	# todo at the end: show points???
+	async def end(self):
+		await self.playerMsg.delete()
 
 # player class takes one input, the discord-user object of the player
 class player:
@@ -100,6 +138,10 @@ class player:
 		self.cards = get_cards(self.game.answers, 10)
 		self.send_channel = self.user.dm_channel
 		
+	# assign print(self) values
 	def __repr__(self):
 		return self.name
 
+	# compare values, used in function game.join
+	def __eq__(self, other):
+		return self.user == other.user
